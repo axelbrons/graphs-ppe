@@ -1,0 +1,18 @@
+digraph{
+0[label="Node Type: ENTRY_POINT 0
+"];
+0->1;
+1[label="Node Type: EXPRESSION 1
+
+EXPRESSION:
+require(bool,string)(! isConfirmed[_txIndex][msg.sender],Tx already confirmed)
+
+IRs:
+REF_28(mapping(address => bool)) -> isConfirmed[_txIndex]
+REF_29(bool) -> REF_28[msg.sender]
+TMP_42 = UnaryType.BANG REF_29 
+TMP_43(None) = SOLIDITY_CALL require(bool,string)(TMP_42,Tx already confirmed)"];
+1->2;
+2[label="Node Type: _ 2
+"];
+}

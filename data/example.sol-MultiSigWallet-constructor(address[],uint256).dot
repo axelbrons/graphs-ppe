@@ -1,0 +1,119 @@
+digraph{
+0[label="Node Type: ENTRY_POINT 0
+"];
+0->1;
+1[label="Node Type: EXPRESSION 1
+
+EXPRESSION:
+require(bool,string)(_owners.length > 0,Owners required)
+
+IRs:
+REF_0 -> LENGTH _owners
+TMP_0(bool) = REF_0 > 0
+TMP_1(None) = SOLIDITY_CALL require(bool,string)(TMP_0,Owners required)"];
+1->2;
+2[label="Node Type: EXPRESSION 2
+
+EXPRESSION:
+require(bool,string)(_numConfirmationsRequired > 0 && _numConfirmationsRequired <= _owners.length,Invalid number of required confirmations)
+
+IRs:
+TMP_2(bool) = _numConfirmationsRequired > 0
+REF_1 -> LENGTH _owners
+TMP_3(bool) = _numConfirmationsRequired <= REF_1
+TMP_4(bool) = TMP_2 && TMP_3
+TMP_5(None) = SOLIDITY_CALL require(bool,string)(TMP_4,Invalid number of required confirmations)"];
+2->5;
+3[label="Node Type: BEGIN_LOOP 3
+"];
+3->6;
+4[label="Node Type: END_LOOP 4
+"];
+4->13;
+5[label="Node Type: NEW VARIABLE 5
+
+EXPRESSION:
+i = 0
+
+IRs:
+i(uint256) := 0(uint256)"];
+5->3;
+6[label="Node Type: IF_LOOP 6
+
+EXPRESSION:
+i < _owners.length
+
+IRs:
+REF_2 -> LENGTH _owners
+TMP_6(bool) = i < REF_2
+CONDITION TMP_6"];
+6->7[label="True"];
+6->4[label="False"];
+7[label="Node Type: NEW VARIABLE 7
+
+EXPRESSION:
+owner = _owners[i]
+
+IRs:
+REF_3(address) -> _owners[i]
+owner(address) := REF_3(address)"];
+7->8;
+8[label="Node Type: EXPRESSION 8
+
+EXPRESSION:
+require(bool,string)(owner != address(0),Invalid owner)
+
+IRs:
+TMP_7 = CONVERT 0 to address
+TMP_8(bool) = owner != TMP_7
+TMP_9(None) = SOLIDITY_CALL require(bool,string)(TMP_8,Invalid owner)"];
+8->9;
+9[label="Node Type: EXPRESSION 9
+
+EXPRESSION:
+require(bool,string)(! isOwner[owner],Owner not unique)
+
+IRs:
+REF_4(bool) -> isOwner[owner]
+TMP_10 = UnaryType.BANG REF_4 
+TMP_11(None) = SOLIDITY_CALL require(bool,string)(TMP_10,Owner not unique)"];
+9->10;
+10[label="Node Type: EXPRESSION 10
+
+EXPRESSION:
+isOwner[owner] = true
+
+IRs:
+REF_5(bool) -> isOwner[owner]
+REF_5(bool) (->isOwner) := True(bool)"];
+10->11;
+11[label="Node Type: EXPRESSION 11
+
+EXPRESSION:
+owners.push(owner)
+
+IRs:
+REF_7 -> LENGTH owners
+TMP_13(uint256) := REF_7(uint256)
+TMP_14(uint256) = TMP_13 (c)+ 1
+REF_7(uint256) (->owners) := TMP_14(uint256)
+REF_8(address) -> owners[TMP_13]
+REF_8(address) (->owners) := owner(address)"];
+11->12;
+12[label="Node Type: EXPRESSION 12
+
+EXPRESSION:
+i ++
+
+IRs:
+TMP_15(uint256) := i(uint256)
+i(uint256) = i (c)+ 1"];
+12->6;
+13[label="Node Type: EXPRESSION 13
+
+EXPRESSION:
+numConfirmationsRequired = _numConfirmationsRequired
+
+IRs:
+numConfirmationsRequired(uint256) := _numConfirmationsRequired(uint256)"];
+}

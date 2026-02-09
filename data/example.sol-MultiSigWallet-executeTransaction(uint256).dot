@@ -1,0 +1,87 @@
+digraph{
+0[label="Node Type: ENTRY_POINT 0
+"];
+0->8;
+1[label="Node Type: NEW VARIABLE 1
+
+EXPRESSION:
+transaction = transactions[_txIndex]
+
+IRs:
+REF_17(MultiSigWallet.Transaction) -> transactions[_txIndex]
+transaction(MultiSigWallet.Transaction) := REF_17(MultiSigWallet.Transaction)"];
+1->2;
+2[label="Node Type: EXPRESSION 2
+
+EXPRESSION:
+require(bool,string)(transaction.numConfirmations >= numConfirmationsRequired,Not enough confirmations)
+
+IRs:
+REF_18(uint256) -> transaction.numConfirmations
+TMP_30(bool) = REF_18 >= numConfirmationsRequired
+TMP_31(None) = SOLIDITY_CALL require(bool,string)(TMP_30,Not enough confirmations)"];
+2->3;
+3[label="Node Type: EXPRESSION 3
+
+EXPRESSION:
+transaction.executed = true
+
+IRs:
+REF_19(bool) -> transaction.executed
+REF_19(bool) (->transaction) := True(bool)"];
+3->4;
+4[label="Node Type: NEW VARIABLE 4
+"];
+4->5;
+5[label="Node Type: EXPRESSION 5
+
+EXPRESSION:
+(success,None) = transaction.to.call{value: transaction.value}(transaction.data)
+
+IRs:
+REF_20(address) -> transaction.to
+REF_22(bytes) -> transaction.data
+REF_23(uint256) -> transaction.value
+TUPLE_0(bool,bytes) = LOW_LEVEL_CALL, dest:REF_20, function:call, arguments:['REF_22'] value:REF_23 
+success(bool)= UNPACK TUPLE_0 index: 0 "];
+5->6;
+6[label="Node Type: EXPRESSION 6
+
+EXPRESSION:
+require(bool,string)(success,Transaction failed)
+
+IRs:
+TMP_32(None) = SOLIDITY_CALL require(bool,string)(success,Transaction failed)"];
+6->7;
+7[label="Node Type: EXPRESSION 7
+
+EXPRESSION:
+ExecuteTransaction(msg.sender,_txIndex)
+
+IRs:
+Emit ExecuteTransaction(msg.sender,_txIndex)"];
+8[label="Node Type: EXPRESSION 8
+
+EXPRESSION:
+onlyOwner()
+
+IRs:
+MODIFIER_CALL, MultiSigWallet.onlyOwner()()"];
+8->9;
+9[label="Node Type: EXPRESSION 9
+
+EXPRESSION:
+txExists(_txIndex)
+
+IRs:
+MODIFIER_CALL, MultiSigWallet.txExists(uint256)(_txIndex)"];
+9->10;
+10[label="Node Type: EXPRESSION 10
+
+EXPRESSION:
+notExecuted(_txIndex)
+
+IRs:
+MODIFIER_CALL, MultiSigWallet.notExecuted(uint256)(_txIndex)"];
+10->1;
+}

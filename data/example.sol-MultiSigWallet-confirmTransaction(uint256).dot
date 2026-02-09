@@ -1,0 +1,72 @@
+digraph{
+0[label="Node Type: ENTRY_POINT 0
+"];
+0->5;
+1[label="Node Type: NEW VARIABLE 1
+
+EXPRESSION:
+transaction = transactions[_txIndex]
+
+IRs:
+REF_13(MultiSigWallet.Transaction) -> transactions[_txIndex]
+transaction(MultiSigWallet.Transaction) := REF_13(MultiSigWallet.Transaction)"];
+1->2;
+2[label="Node Type: EXPRESSION 2
+
+EXPRESSION:
+transaction.numConfirmations += 1
+
+IRs:
+REF_14(uint256) -> transaction.numConfirmations
+REF_14(-> transaction) = REF_14 (c)+ 1"];
+2->3;
+3[label="Node Type: EXPRESSION 3
+
+EXPRESSION:
+isConfirmed[_txIndex][msg.sender] = true
+
+IRs:
+REF_15(mapping(address => bool)) -> isConfirmed[_txIndex]
+REF_16(bool) -> REF_15[msg.sender]
+REF_16(bool) (->isConfirmed) := True(bool)"];
+3->4;
+4[label="Node Type: EXPRESSION 4
+
+EXPRESSION:
+ConfirmTransaction(msg.sender,_txIndex)
+
+IRs:
+Emit ConfirmTransaction(msg.sender,_txIndex)"];
+5[label="Node Type: EXPRESSION 5
+
+EXPRESSION:
+onlyOwner()
+
+IRs:
+MODIFIER_CALL, MultiSigWallet.onlyOwner()()"];
+5->6;
+6[label="Node Type: EXPRESSION 6
+
+EXPRESSION:
+txExists(_txIndex)
+
+IRs:
+MODIFIER_CALL, MultiSigWallet.txExists(uint256)(_txIndex)"];
+6->7;
+7[label="Node Type: EXPRESSION 7
+
+EXPRESSION:
+notExecuted(_txIndex)
+
+IRs:
+MODIFIER_CALL, MultiSigWallet.notExecuted(uint256)(_txIndex)"];
+7->8;
+8[label="Node Type: EXPRESSION 8
+
+EXPRESSION:
+notConfirmed(_txIndex)
+
+IRs:
+MODIFIER_CALL, MultiSigWallet.notConfirmed(uint256)(_txIndex)"];
+8->1;
+}

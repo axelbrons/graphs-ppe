@@ -1,0 +1,14 @@
+digraph{
+0[label="Node Type: ENTRY_POINT 0
+"];
+0->1;
+1[label="Node Type: EXPRESSION 1
+
+EXPRESSION:
+Deposit(msg.sender,msg.value,address(this).balance)
+
+IRs:
+TMP_16 = CONVERT this to address
+TMP_17(uint256) = SOLIDITY_CALL balance(address)(TMP_16)
+Emit Deposit(msg.sender,msg.value,TMP_17)"];
+}
