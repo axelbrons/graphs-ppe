@@ -10,6 +10,7 @@ Gemini.md
 *.csv
 data/SC_Vuln_8label.csv
 get_data_git.py
+*.sol
 
 # Distribution / packaging
 .Python
