@@ -1,57 +1,54 @@
+# src/data_prep.py
 import pandas as pd
 import os
 import random
+import numpy as np
+import json
 from src import config
 
-def create_balanced_dataset():
-    # 1. Charger le dataset existant (les vulnérabilités)
-    print("Chargement du dataset original...")
+def create_optimized_dataset():
+    print(f"Chargement du dataset original depuis {config.INPUT_CSV}...")
     try:
         df = pd.read_csv(config.INPUT_CSV)
     except FileNotFoundError:
         print(f"Erreur : Le fichier {config.INPUT_CSV} est introuvable.")
         return
 
-    # On s'assure d'avoir uniquement les colonnes utiles
-    # Note : On ignore 'Unnamed: 0' s'il existe
     if 'Unnamed: 0' in df.columns:
         df = df.drop(columns=['Unnamed: 0'])
 
-    # 2. Échantillonner 200 lignes pour chaque label existant
-    print("Échantillonnage des classes existantes...")
-    balanced_dfs = []
-    
-    # On récupère la liste des labels uniques
+    optimized_dfs = []
     unique_labels = df['label'].unique()
-    
-    for label in unique_labels:
-        # On filtre le dataframe pour ce label spécifique
-        subset = df[df['label'] == label]
-        
-        # Si on a assez de données, on en prend 200 au hasard
-        if len(subset) >= config.SAMPLES_PER_CLASS:
-            sampled_subset = subset.sample(n=config.SAMPLES_PER_CLASS, random_state=42)
-        else:
-            # Si on a moins de 200 lignes, on prend tout ce qu'il y a (ou on duplique, ici on prend tout)
-            print(f"Attention : Le label '{label}' a moins de {config.SAMPLES_PER_CLASS} exemples ({len(subset)}).")
-            sampled_subset = subset
-            
-        balanced_dfs.append(sampled_subset)
 
-    # 3. Traiter les fichiers "Sains" (Valid)
-    print("Traitement des fichiers sains...")
+    print("\n--- ÉCHANTILLONNAGE DES VULNÉRABILITÉS ---")
+    for label in unique_labels:
+        subset = df[df['label'] == label]
+        count = len(subset)
+        
+        # Règle 1 : Plafonner les grosses classes (Downsampling)
+        if count > config.MAX_VULN_SAMPLES:
+            sampled_subset = subset.sample(n=config.MAX_VULN_SAMPLES, random_state=config.SEED)
+            print(f"{label}: Plafonné à {config.MAX_VULN_SAMPLES} (au lieu de {count})")
+        else:
+            # Règle 2 : Garder les petites classes telles quelles
+            sampled_subset = subset
+            print(f"{label}: Conservé tel quel ({count} exemples)")
+            
+        optimized_dfs.append(sampled_subset)
+
+    print("\n--- TRAITEMENT DES CONTRATS SAINS (SAFE) ---")
     valid_files = [f for f in os.listdir(config.VALID_CONTRACTS_DIR) if f.endswith('.sol')]
     
-    if len(valid_files) < config.SAMPLES_PER_CLASS:
-        print(f"Attention : Tu n'as que {len(valid_files)} fichiers valides dans {config.VALID_CONTRACTS_DIR}. Le script en utilisera autant que possible.")
-        selected_valid_files = valid_files
+    # Règle 3 : Plafonner le nombre de contrats sains
+    if len(valid_files) > config.MAX_SAFE_SAMPLES:
+        random.seed(config.SEED)
+        selected_valid_files = random.sample(valid_files, config.MAX_SAFE_SAMPLES)
+        print(f"Safe: Plafonné à {config.MAX_SAFE_SAMPLES} (sur {len(valid_files)} disponibles)")
     else:
-        # On mélange et on prend 200 fichiers
-        random.shuffle(valid_files)
-        selected_valid_files = valid_files[:config.SAMPLES_PER_CLASS]
+        selected_valid_files = valid_files
+        print(f"Safe: {len(valid_files)} contrats sains utilisés")
 
-    # Déterminer le nouveau code encodé (max existant + 1)
-    new_label_encoded = df['label_encoded'].max() + 1
+    new_label_encoded = int(df['label_encoded'].max() + 1)
     
     valid_data = []
     for filename in selected_valid_files:
@@ -59,38 +56,53 @@ def create_balanced_dataset():
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 code_content = f.read()
-                
             valid_data.append({
                 'filename': filename,
                 'code': code_content,
-                'label': 'Safe', # Nouveau Label Texte
-                'label_encoded': new_label_encoded # Nouveau Label Numérique (ex: 9)
+                'label': 'Safe',
+                'label_encoded': new_label_encoded
             })
         except Exception as e:
-            print(f"Erreur de lecture {filename}: {e}")
+            pass # On ignore les fichiers illisibles
 
-    # Création du dataframe pour les sains
-    df_valid = pd.DataFrame(valid_data)
-    balanced_dfs.append(df_valid)
+    if valid_data:
+        df_valid = pd.DataFrame(valid_data)
+        optimized_dfs.append(df_valid)
 
     # 4. Fusionner et Mélanger
-    final_df = pd.concat(balanced_dfs, ignore_index=True)
-    
-    # Mélanger aléatoirement toutes les lignes (shuffle)
-    final_df = final_df.sample(frac=1, random_state=42).reset_index(drop=True)
-
-    # Garder uniquement les colonnes demandées
+    final_df = pd.concat(optimized_dfs, ignore_index=True)
+    final_df = final_df.sample(frac=1, random_state=config.SEED).reset_index(drop=True)
     final_df = final_df[['filename', 'code', 'label', 'label_encoded']]
 
     # 5. Sauvegarde
-    final_df.to_csv(config.OUTPUT_CSV, index=False) # index=False pour ne pas recréer une colonne Unnamed
+    final_df.to_csv(config.DATA_PATH, index=False)
     
-    print("-" * 30)
-    print(f"Succès ! Dataset créé : {config.OUTPUT_CSV}")
+    print("\n" + "="*50)
+    print(f"Succès ! Nouveau dataset créé : {config.DATA_PATH}")
     print(f"Nombre total de lignes : {len(final_df)}")
-    print("\nRépartition des classes :")
-    print(final_df['label'].value_counts())
+    
+    # --- CALCUL DES POIDS POUR PYTORCH ---
+    print("\n--- CALCUL DES POIDS DE CLASSES (CLASS WEIGHTS) ---")
+    # Formule mathématique classique : N_total / (N_classes * N_samples_de_la_classe)
+    class_counts = final_df['label_encoded'].value_counts().sort_index()
+    n_samples = len(final_df)
+    n_classes = len(class_counts)
+    
+    weights_array = []
+    print("Poids calculés par label (plus c'est rare, plus le poids est fort) :")
+    for encoded_label, count in class_counts.items():
+        label_name = final_df[final_df['label_encoded'] == encoded_label]['label'].iloc[0]
+        weight = n_samples / (n_classes * count)
+        weights_array.append(round(weight, 4))
+        print(f"  - {label_name} : {round(weight, 4)}")
+        
+    weights_data = {
+        "weights": weights_array,
+        "label_map": {int(k): v for k, v in zip(class_counts.index, unique_labels.tolist() + ['Safe'])}
+    }
+    with open('./data/class_weights.json', 'w') as f:
+        json.dump(weights_data, f)
+    print("Poids sauvegardés dans ./data/class_weights.json")
 
-# Lancer la fonction
 if __name__ == "__main__":
-    create_balanced_dataset()
+    create_optimized_dataset()

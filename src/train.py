@@ -1,6 +1,8 @@
 # src/train.py
 import pandas as pd
 import torch
+import os
+import json
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
@@ -34,7 +36,18 @@ def train():
     model.to(config.DEVICE)
 
     optimizer = AdamW(model.parameters(), lr=config.LEARNING_RATE)
-    criterion = nn.CrossEntropyLoss()
+
+    #criterion = nn.CrossEntropyLoss()
+    weights_path = './data/class_weights.json'
+    if os.path.exists(weights_path):
+        with open(weights_path, 'r') as f:
+            data = json.load(f)
+            class_weights = torch.tensor(data['weights']).to(config.DEVICE)
+            print("Utilisation des poids de classes chargés depuis le fichier.")
+            criterion = nn.CrossEntropyLoss(weight=class_weights)
+    else:
+        print("Aucun fichier de poids trouvé, utilisation d'une Loss classique.")
+        criterion = nn.CrossEntropyLoss()
 
     best_val_loss = float('inf')
 

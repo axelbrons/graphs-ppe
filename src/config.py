@@ -1,12 +1,16 @@
 # src/config.py
+import os
 import torch
 import random
 import numpy as np
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- CHEMINS (PATHS) ---
 INPUT_CSV = './data/SC_Vuln_8label.csv'
 VALID_CONTRACTS_DIR = './data/valid'
-DATA_PATH = '/home/onyxia/work/graphs-ppe/data/dataset_9label_200_v1.csv'
+DATA_PATH = './data/dataset_9l_w_v2.csv'
 SAVE_PATH = "best_model.pt"
 
 # --- HYPERPARAMÈTRES ---
@@ -18,6 +22,12 @@ BATCH_SIZE = 8
 EPOCHS = 10
 LEARNING_RATE = 2e-5
 SAMPLES_PER_CLASS = 200
+MAX_VULN_SAMPLES = 600
+MAX_SAFE_SAMPLES = 1000
+
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+SAFE_REPO_NAME = 'thec00n/etherscan_verified_contracts'
+SAFE_TARGET_COUNT = 1000
 
 # --- DEVICE ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
