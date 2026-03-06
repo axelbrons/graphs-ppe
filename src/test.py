@@ -1,4 +1,5 @@
 import torch
+import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -75,5 +76,4 @@ def test():
     plt.show()
 
 if __name__ == "__main__":
-    import os
     test()

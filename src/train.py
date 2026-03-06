@@ -28,7 +28,7 @@ BATCH_SIZE = 8
 EPOCHS = 10
 LEARNING_RATE = 2e-5
 SAVE_PATH = "best_model.pt"
-DATA_PATH = "./data/dataset_9label_200_v1.csv"
+DATA_PATH = "/home/onyxia/work/graphs-ppe/data/dataset_9label_200_v1.csv"
 
 # --- TREE-SITTER SETUP ---
 SOL_LANGUAGE = Language(tssoldity.language())
