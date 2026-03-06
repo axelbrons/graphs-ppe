@@ -9,34 +9,31 @@ from transformers import AutoTokenizer
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
 from tqdm import tqdm
-
-from src import config
-from src.dataset import SolidityDataset
-from src.model import GraphCodeBERTClassifier
+from train import SolidityDataset, GraphCodeBERTClassifier, MODEL_NAME, MAX_SEQ_LEN, MAX_VAR_LEN, BATCH_SIZE, SEED, DEVICE, DATA_PATH, SAVE_PATH
 
 def test():
     # 1. Load Data
-    print(f"Loading data from {config.DATA_PATH}...")
-    df = pd.read_csv(config.DATA_PATH)
+    print(f"Loading data from {DATA_PATH}...")
+    df = pd.read_csv(DATA_PATH)
     
     # We must use the same split to get the test set
-    _, temp_df = train_test_split(df, test_size=0.3, random_state=config.SEED, stratify=df['label_encoded'])
-    _, test_df = train_test_split(temp_df, test_size=0.5, random_state=config.SEED, stratify=temp_df['label_encoded'])
+    _, temp_df = train_test_split(df, test_size=0.3, random_state=SEED, stratify=df['label_encoded'])
+    _, test_df = train_test_split(temp_df, test_size=0.5, random_state=SEED, stratify=temp_df['label_encoded'])
 
-    tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
-    test_dataset = SolidityDataset(test_df, tokenizer, config.MAX_SEQ_LEN, config.MAX_VAR_LEN)
-    test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    test_dataset = SolidityDataset(test_df, tokenizer, MAX_SEQ_LEN, MAX_VAR_LEN)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
     # 2. Load Model
     num_labels = df['label_encoded'].nunique()
-    model = GraphCodeBERTClassifier(config.MODEL_NAME, num_labels)
+    model = GraphCodeBERTClassifier(MODEL_NAME, num_labels)
     
-    if not os.path.exists(config.SAVE_PATH):
-        print(f"Error: Model file {config.SAVE_PATH} not found. Please train the model first.")
+    if not os.path.exists(SAVE_PATH):
+        print(f"Error: Model file {SAVE_PATH} not found. Please train the model first.")
         return
 
-    model.load_state_dict(torch.load(config.SAVE_PATH, map_location=config.DEVICE))
-    model.to(config.DEVICE)
+    model.load_state_dict(torch.load(SAVE_PATH, map_location=DEVICE))
+    model.to(DEVICE)
     model.eval()
 
     # 3. Evaluation
@@ -46,9 +43,9 @@ def test():
 
     with torch.no_grad():
         for batch in test_bar:
-            input_ids = batch['input_ids'].to(config.DEVICE)
-            attention_mask = batch['attention_mask'].to(config.DEVICE)
-            labels = batch['labels'].to(config.DEVICE)
+            input_ids = batch['input_ids'].to(DEVICE)
+            attention_mask = batch['attention_mask'].to(DEVICE)
+            labels = batch['labels'].to(DEVICE)
 
             logits = model(input_ids, attention_mask)
             preds = torch.argmax(logits, dim=1)

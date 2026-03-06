@@ -1,0 +1,30 @@
+# src/config.py
+import torch
+import random
+import numpy as np
+
+# --- CHEMINS (PATHS) ---
+INPUT_CSV = './data/SC_Vuln_8label.csv'
+VALID_CONTRACTS_DIR = './data/valid'
+DATA_PATH = '/home/onyxia/work/graphs-ppe/data/dataset_9label_200_v1.csv'
+SAVE_PATH = "best_model.pt"
+
+# --- HYPERPARAMÈTRES ---
+SEED = 42
+MODEL_NAME = "microsoft/graphcodebert-base"
+MAX_SEQ_LEN = 512
+MAX_VAR_LEN = 128
+BATCH_SIZE = 8
+EPOCHS = 10
+LEARNING_RATE = 2e-5
+SAMPLES_PER_CLASS = 200
+
+# --- DEVICE ---
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def set_seed(seed=SEED):
+    """Fixe l'aléatoire pour la reproductibilité."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
