@@ -1,5 +1,6 @@
 # src/fetch_contracts.py
 import os
+import requests # Pour des téléchargements ultra-rapides
 from github import Github, Auth
 from src import config
 
@@ -17,40 +18,46 @@ def fetch_safe_contracts():
     g = Github(auth=auth)
     repo = g.get_repo(config.SAFE_REPO_NAME)
 
-    print(f"Connexion au dépôt '{config.SAFE_REPO_NAME}' réussie. Démarrage du scan...")
+    print(f"Connexion au dépôt '{config.SAFE_REPO_NAME}' réussie. Récupération de l'arborescence...")
+
+    # --- LA MAGIE EST ICI ---
+    # On récupère tout l'arbre du dépôt (bypasse la limite de 1000 fichiers)
+    branch = repo.default_branch
+    tree = repo.get_git_tree(branch, recursive=True).tree
+
+    # On filtre pour ne garder que la liste des fichiers .sol
+    sol_files = [item for item in tree if item.path.endswith('.sol') and item.type == 'blob']
+    print(f"Trouvé {len(sol_files)} fichiers .sol au total sur le dépôt GitHub !")
 
     count = 0
-    contents = repo.get_contents("")
-
-    # 4. Boucle de téléchargement
-    while contents and count < config.SAFE_TARGET_COUNT:
-        file_content = contents.pop(0)
-        
-        # Si c'est un dossier, on ajoute son contenu à la file d'attente
-        if file_content.type == "dir":
-            print(f"... Exploration du dossier : {file_content.path}")
-            try:
-                contents.extend(repo.get_contents(file_content.path))
-            except Exception as e:
-                print(f"Erreur d'accès au dossier {file_content.path}: {e}")
-
-        # Si c'est un fichier .sol, on le télécharge
-        elif file_content.name.endswith(".sol"):
+    # 4. Boucle de téléchargement optimisée
+    for item in sol_files:
+        if count >= config.SAFE_TARGET_COUNT:
+            break
             
-            try:
-                code = file_content.decoded_content.decode('utf-8', errors='ignore')
-                safe_name = file_content.name.replace("/", "_") 
+        try:
+            # On génère l'URL brute (comme quand tu cliques sur "Raw" sur GitHub)
+            raw_url = f"https://raw.githubusercontent.com/{config.SAFE_REPO_NAME}/{branch}/{item.path}"
+            
+            # Téléchargement direct sans impacter le quota d'API GitHub
+            response = requests.get(raw_url, timeout=10)
+            
+            if response.status_code == 200:
+                code = response.text
+                safe_name = item.path.replace("/", "_") 
                 
-                # Sauvegarde dans le dossier ./data/valid/
+                # Sauvegarde
                 file_path = os.path.join(config.VALID_CONTRACTS_DIR, safe_name)
                 with open(file_path, "w", encoding='utf-8') as f:
                     f.write(code)
                 
                 count += 1
                 print(f"[{count}/{config.SAFE_TARGET_COUNT}] SAUVEGARDÉ : {safe_name}")
+            else:
+                print(f"Erreur HTTP {response.status_code} pour {item.path}")
                 
-            except Exception as e:
-                print(f"Erreur lors du téléchargement de {file_content.name}: {e}")
+        except Exception as e:
+            print(f"Erreur lors du téléchargement de {item.path}: {e}")
 
     print("Fini ! Dataset de contrats sains téléchargé et prêt.")
 

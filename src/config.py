@@ -10,8 +10,8 @@ load_dotenv()
 # --- CHEMINS (PATHS) ---
 INPUT_CSV = './data/SC_Vuln_8label.csv'
 VALID_CONTRACTS_DIR = './data/valid'
-DATA_PATH = './data/dataset_2l_v1.csv'
-SAVE_PATH = "best_model_v5.pt"
+DATA_PATH = './data/dataset_2l_v2.csv'
+SAVE_PATH = "best_model_v6.pt"
 
 # --- HYPERPARAMÈTRES ---
 SEED = 42
