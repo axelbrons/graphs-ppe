@@ -1,3 +1,4 @@
+# src/test.py
 import torch
 import os
 import pandas as pd
@@ -25,7 +26,14 @@ def test():
 
     tokenizer = AutoTokenizer.from_pretrained(config.MODEL_NAME)
     test_dataset = SolidityDataset(test_df, tokenizer, config.MAX_SEQ_LEN, config.MAX_VAR_LEN)
-    test_loader = DataLoader(test_dataset, batch_size=config.BATCH_SIZE)
+    
+    # --- OPTIMISATION 1 : DataLoader Turbo ---
+    test_loader = DataLoader(
+        test_dataset, 
+        batch_size=config.BATCH_SIZE,
+        num_workers=4,       # Utilise 4 cœurs CPU en parallèle
+        pin_memory=True      # Prépare la mémoire pour un transfert ultra-rapide vers le GPU
+    )
 
     # 2. Load Model
     num_labels = df['label_encoded'].nunique()
@@ -50,7 +58,10 @@ def test():
             attention_mask = batch['attention_mask'].to(config.DEVICE)
             labels = batch['labels'].to(config.DEVICE)
 
-            logits = model(input_ids, attention_mask)
+            # --- OPTIMISATION 2 : AMP (Autocast) pour l'inférence ---
+            with torch.amp.autocast('cuda'):
+                logits = model(input_ids, attention_mask)
+                
             preds = torch.argmax(logits, dim=1)
             
             all_preds.extend(preds.cpu().numpy())
@@ -61,12 +72,12 @@ def test():
     label_map = df[['label', 'label_encoded']].drop_duplicates().sort_values('label_encoded')
     target_names = label_map['label'].tolist()
 
-    print("Classification Report:")
+    print("\nClassification Report:")
     print(classification_report(all_labels, all_preds, target_names=target_names))
 
     # 5. Confusion Matrix Visualization
     cm = confusion_matrix(all_labels, all_preds)
-    plt.figure(figsize=(12, 10))
+    plt.figure(figsize=(10, 8)) # Taille légèrement réduite pour un dataset binaire
     sns.heatmap(cm, annot=True, fmt='d', xticklabels=target_names, yticklabels=target_names, cmap='Blues')
     plt.xlabel('Predicted Labels')
     plt.ylabel('True Labels')
@@ -76,7 +87,7 @@ def test():
     plt.tight_layout()
     plt.savefig('confusion_matrix.png')
     print("Confusion matrix saved as confusion_matrix.png")
-    plt.show()
+    # plt.show() # Sur un serveur distant comme Onyxia, plt.show() peut parfois bloquer, on commente par précaution.
 
 if __name__ == "__main__":
     test()
