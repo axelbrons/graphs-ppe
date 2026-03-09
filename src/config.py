@@ -10,8 +10,8 @@ load_dotenv()
 # --- CHEMINS (PATHS) ---
 INPUT_CSV = './data/SC_Vuln_8label.csv'
 VALID_CONTRACTS_DIR = './data/valid'
-DATA_PATH = './data/dataset_2l_v1.csv'
-SAVE_PATH = "best_model_v5.pt"
+DATA_PATH = './data/dataset_2l_v2.parquet'
+SAVE_PATH = "best_model_v6.pt"
 
 # --- HYPERPARAMÈTRES ---
 SEED = 42
@@ -19,7 +19,7 @@ MODEL_NAME = "microsoft/graphcodebert-base"
 MAX_SEQ_LEN = 512
 MAX_VAR_LEN = 128
 BATCH_SIZE = 8
-EPOCHS = 4
+EPOCHS = 10
 LEARNING_RATE = 2e-5
 SAMPLES_PER_CLASS = 200
 MAX_VULN_SAMPLES = 600

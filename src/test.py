@@ -18,7 +18,7 @@ from src.model import GraphCodeBERTClassifier
 def test():
     # 1. Load Data
     print(f"Loading data from {config.DATA_PATH}...")
-    df = pd.read_csv(config.DATA_PATH)
+    df = pd.read_parquet(config.DATA_PATH)
     
     # We must use the same split to get the test set
     _, temp_df = train_test_split(df, test_size=0.3, random_state=config.SEED, stratify=df['label_encoded'])
