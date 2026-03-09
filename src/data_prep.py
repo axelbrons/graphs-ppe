@@ -4,6 +4,7 @@ import os
 import random
 import numpy as np
 import json
+from sklearn.preprocessing import LabelEncoder
 from src import config
 
 def create_optimized_dataset():
@@ -16,6 +17,14 @@ def create_optimized_dataset():
 
     if 'Unnamed: 0' in df.columns:
         df = df.drop(columns=['Unnamed: 0'])
+
+    # --- NOUVEAU : Suppression des classes indésirables ---
+    labels_to_remove = [
+        './Dataset/dangerous delegatecall (DE)/', 
+        './Dataset/ether frozen (EF)'
+    ]
+    df = df[~df['label'].isin(labels_to_remove)]
+    print(f"Classes supprimées : {labels_to_remove}")
 
     optimized_dfs = []
     unique_labels = df['label'].unique()
@@ -47,8 +56,6 @@ def create_optimized_dataset():
     else:
         selected_valid_files = valid_files
         print(f"Safe: {len(valid_files)} contrats sains utilisés")
-
-    new_label_encoded = int(df['label_encoded'].max() + 1)
     
     valid_data = []
     for filename in selected_valid_files:
@@ -59,8 +66,8 @@ def create_optimized_dataset():
             valid_data.append({
                 'filename': filename,
                 'code': code_content,
-                'label': 'Safe',
-                'label_encoded': new_label_encoded
+                'label': 'Safe' 
+                # On ne met plus de label_encoded ici, on le fera globalement à la fin
             })
         except Exception as e:
             pass # On ignore les fichiers illisibles
@@ -69,9 +76,18 @@ def create_optimized_dataset():
         df_valid = pd.DataFrame(valid_data)
         optimized_dfs.append(df_valid)
 
-    # 4. Fusionner et Mélanger
+    # 4. Fusionner tout le monde
     final_df = pd.concat(optimized_dfs, ignore_index=True)
+    
+    # --- NOUVEAU : Ré-encodage continu et propre (0 à 6) ---
+    print("\n--- RÉ-ENCODAGE DES LABELS (0 à 6) ---")
+    le = LabelEncoder()
+    final_df['label_encoded'] = le.fit_transform(final_df['label'])
+    
+    # Mélanger
     final_df = final_df.sample(frac=1, random_state=config.SEED).reset_index(drop=True)
+    
+    # On s'assure de ne garder que les bonnes colonnes
     final_df = final_df[['filename', 'code', 'label', 'label_encoded']]
 
     # 5. Sauvegarde
@@ -83,26 +99,30 @@ def create_optimized_dataset():
     
     # --- CALCUL DES POIDS POUR PYTORCH ---
     print("\n--- CALCUL DES POIDS DE CLASSES (CLASS WEIGHTS) ---")
-    # Formule mathématique classique : N_total / (N_classes * N_samples_de_la_classe)
     class_counts = final_df['label_encoded'].value_counts().sort_index()
     n_samples = len(final_df)
     n_classes = len(class_counts)
     
     weights_array = []
-    print("Poids calculés par label (plus c'est rare, plus le poids est fort) :")
+    print("Poids calculés par label :")
     for encoded_label, count in class_counts.items():
-        label_name = final_df[final_df['label_encoded'] == encoded_label]['label'].iloc[0]
+        # Retrouver le nom du label grâce au LabelEncoder
+        label_name = le.inverse_transform([encoded_label])[0]
         weight = n_samples / (n_classes * count)
         weights_array.append(round(weight, 4))
-        print(f"  - {label_name} : {round(weight, 4)}")
+        print(f"  - [{encoded_label}] {label_name} : {round(weight, 4)} ({count} samples)")
         
+    # Mapping propre généré par le LabelEncoder
+    label_map = {int(i): label for i, label in enumerate(le.classes_)}
+    
     weights_data = {
         "weights": weights_array,
-        "label_map": {int(k): v for k, v in zip(class_counts.index, unique_labels.tolist() + ['Safe'])}
+        "label_map": label_map
     }
+    
     with open('./data/class_weights.json', 'w') as f:
         json.dump(weights_data, f)
-    print("Poids sauvegardés dans ./data/class_weights.json")
+    print("Poids et mapping sauvegardés dans ./data/class_weights.json")
 
 if __name__ == "__main__":
     create_optimized_dataset()

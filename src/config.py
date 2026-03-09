@@ -10,7 +10,7 @@ load_dotenv()
 # --- CHEMINS (PATHS) ---
 INPUT_CSV = './data/SC_Vuln_8label.csv'
 VALID_CONTRACTS_DIR = './data/valid'
-DATA_PATH = '/home/onyxia/work/graphs-ppe/data/dataset_7l_v3.csv'
+DATA_PATH = './data/dataset_7l_v4.csv'
 SAVE_PATH = "best_model_v4.pt"
 
 # --- HYPERPARAMÈTRES ---
