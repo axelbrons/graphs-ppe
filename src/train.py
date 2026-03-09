@@ -29,8 +29,23 @@ def train():
     train_dataset = SolidityDataset(train_df, tokenizer, config.MAX_SEQ_LEN, config.MAX_VAR_LEN)
     val_dataset = SolidityDataset(val_df, tokenizer, config.MAX_SEQ_LEN, config.MAX_VAR_LEN)
     
-    train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE)
+    #train_loader = DataLoader(train_dataset, batch_size=config.BATCH_SIZE, shuffle=True)
+    #val_loader = DataLoader(val_dataset, batch_size=config.BATCH_SIZE)
+    train_loader = DataLoader(
+        train_dataset, 
+        batch_size=config.BATCH_SIZE, 
+        shuffle=True,
+        num_workers=4,        # Utilise 4 cœurs CPU en parallèle
+        pin_memory=True,      # Prépare la mémoire pour un transfert ultra-rapide vers le GPU
+        prefetch_factor=2     # Prépare 2 batchs d'avance
+    )
+    
+    val_loader = DataLoader(
+        val_dataset, 
+        batch_size=config.BATCH_SIZE,
+        num_workers=4,
+        pin_memory=True
+    )
 
     # 2. Initialize Model
     model = GraphCodeBERTClassifier(config.MODEL_NAME, num_labels)
@@ -65,6 +80,8 @@ def train():
 
     best_val_loss = float('inf')
 
+    scaler = torch.amp.GradScaler('cuda')
+
     # 3. Training Loop
     for epoch in range(config.EPOCHS):
         model.train()
@@ -77,11 +94,27 @@ def train():
             labels = batch['labels'].to(config.DEVICE)
 
             optimizer.zero_grad()
-            logits = model(input_ids, attention_mask)
-            loss = criterion(logits, labels)
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+
+            with torch.amp.autocast('cuda'):
+                logits = model(input_ids, attention_mask)
+                loss = criterion(logits, labels)
+
+            # logits = model(input_ids, attention_mask)
+            # loss = criterion(logits, labels)
+            
+            # loss.backward()
+            # optimizer.step()
+
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            
+            scale_before = scaler.get_scale()
+            scaler.update()
+            scale_after = scaler.get_scale()
+            
+            # Si le scale n'a pas baissé, l'optimizer a bien travaillé, on avance le scheduler
+            if scale_before <= scale_after:
+                scheduler.step()
 
             train_loss += loss.item()
             train_bar.set_postfix(loss=loss.item())
@@ -101,8 +134,12 @@ def train():
                 attention_mask = batch['attention_mask'].to(config.DEVICE)
                 labels = batch['labels'].to(config.DEVICE)
 
-                logits = model(input_ids, attention_mask)
-                loss = criterion(logits, labels)
+                with torch.cuda.amp.autocast():
+                    logits = model(input_ids, attention_mask)
+                    loss = criterion(logits, labels)
+
+                # logits = model(input_ids, attention_mask)
+                # loss = criterion(logits, labels)
                 val_loss += loss.item()
 
                 preds = torch.argmax(logits, dim=1)
