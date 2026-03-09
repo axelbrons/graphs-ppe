@@ -167,6 +167,19 @@ class SolidityDataset(Dataset):
             input_ids = input_ids[:self.max_seq_len]
             mask = mask[:self.max_seq_len, :self.max_seq_len]
 
+        # input_tensor = torch.tensor(input_ids, dtype=torch.long)
+        
+        # # Le vocabulaire de GraphCodeBERT a une taille maximale (souvent 50265).
+        # # On force tous les IDs à rester entre 0 et la taille du vocab (ex: 50264)
+        # # S'il y a un ID aberrant (ex: -1 ou 999999), on le remplace par l'ID du token [UNK] (qui est 3).
+        # vocab_size = self.tokenizer.vocab_size
+        # unk_id = self.tokenizer.unk_token_id
+        
+        # # Remplacer les valeurs hors limites par UNK
+        # input_tensor = torch.where((input_tensor < 0) | (input_tensor >= vocab_size), 
+        #                            torch.tensor(unk_id), 
+        #                            input_tensor)
+
         return {
             'input_ids': torch.tensor(input_ids, dtype=torch.long),
             'attention_mask': mask.unsqueeze(0), # (1, seq_len, seq_len)

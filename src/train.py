@@ -9,6 +9,7 @@ from torch.optim import AdamW
 from transformers import AutoTokenizer
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+from transformers import get_linear_schedule_with_warmup
 
 from src import config
 from src.dataset import SolidityDataset
@@ -35,19 +36,32 @@ def train():
     model = GraphCodeBERTClassifier(config.MODEL_NAME, num_labels)
     model.to(config.DEVICE)
 
-    optimizer = AdamW(model.parameters(), lr=config.LEARNING_RATE)
 
-    #criterion = nn.CrossEntropyLoss()
-    weights_path = './data/class_weights.json'
-    if os.path.exists(weights_path):
-        with open(weights_path, 'r') as f:
-            data = json.load(f)
-            class_weights = torch.tensor(data['weights']).to(config.DEVICE)
-            print("Utilisation des poids de classes chargés depuis le fichier.")
-            criterion = nn.CrossEntropyLoss(weight=class_weights)
-    else:
-        print("Aucun fichier de poids trouvé, utilisation d'une Loss classique.")
-        criterion = nn.CrossEntropyLoss()
+    optimizer_grouped_parameters = [
+        {'params': model.encoder.parameters(), 'lr': 1e-5}, # Corps lent
+        {'params': model.classifier.parameters(), 'lr': 1e-4} # Tête rapide
+    ]
+    # optimizer = AdamW(model.parameters(), lr=config.LEARNING_RATE)
+    optimizer = AdamW(optimizer_grouped_parameters)
+
+    total_steps = len(train_loader) * config.EPOCHS
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=int(0.1 * total_steps), # 10% de montée
+        num_training_steps=total_steps
+    )
+
+    criterion = nn.CrossEntropyLoss()
+    # weights_path = './data/class_weights.json'
+    # if os.path.exists(weights_path):
+    #     with open(weights_path, 'r') as f:
+    #         data = json.load(f)
+    #         class_weights = torch.tensor(data['weights']).to(config.DEVICE)
+    #         print("Utilisation des poids de classes chargés depuis le fichier.")
+    #         criterion = nn.CrossEntropyLoss(weight=class_weights)
+    # else:
+    #     print("Aucun fichier de poids trouvé, utilisation d'une Loss classique.")
+    #     criterion = nn.CrossEntropyLoss()
 
     best_val_loss = float('inf')
 
@@ -67,6 +81,7 @@ def train():
             loss = criterion(logits, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             train_loss += loss.item()
             train_bar.set_postfix(loss=loss.item())

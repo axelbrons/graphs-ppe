@@ -10,8 +10,8 @@ load_dotenv()
 # --- CHEMINS (PATHS) ---
 INPUT_CSV = './data/SC_Vuln_8label.csv'
 VALID_CONTRACTS_DIR = './data/valid'
-DATA_PATH = '/home/onyxia/work/graphs-ppe/data/dataset_9l_w_v2.csv'
-SAVE_PATH = "best_model_v2.pt"
+DATA_PATH = '/home/onyxia/work/graphs-ppe/data/dataset_7l_v3.csv'
+SAVE_PATH = "best_model_v4.pt"
 
 # --- HYPERPARAMÈTRES ---
 SEED = 42
@@ -19,7 +19,7 @@ MODEL_NAME = "microsoft/graphcodebert-base"
 MAX_SEQ_LEN = 512
 MAX_VAR_LEN = 128
 BATCH_SIZE = 8
-EPOCHS = 10
+EPOCHS = 4
 LEARNING_RATE = 2e-5
 SAMPLES_PER_CLASS = 200
 MAX_VULN_SAMPLES = 600
