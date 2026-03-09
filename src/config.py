@@ -10,8 +10,8 @@ load_dotenv()
 # --- CHEMINS (PATHS) ---
 INPUT_CSV = './data/SC_Vuln_8label.csv'
 VALID_CONTRACTS_DIR = './data/valid'
-DATA_PATH = './data/dataset_7l_v4.csv'
-SAVE_PATH = "best_model_v4.pt"
+DATA_PATH = './data/dataset_2l_v1.csv'
+SAVE_PATH = "best_model_v5.pt"
 
 # --- HYPERPARAMÈTRES ---
 SEED = 42
@@ -23,11 +23,11 @@ EPOCHS = 4
 LEARNING_RATE = 2e-5
 SAMPLES_PER_CLASS = 200
 MAX_VULN_SAMPLES = 600
-MAX_SAFE_SAMPLES = 1000
+MAX_SAFE_SAMPLES = 3000
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 SAFE_REPO_NAME = 'thec00n/etherscan_verified_contracts'
-SAFE_TARGET_COUNT = 1000
+SAFE_TARGET_COUNT = 3000
 
 # --- DEVICE ---
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
